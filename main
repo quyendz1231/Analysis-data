@@ -1,0 +1,66 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score
+
+# --------------------------------------------------
+# BƯỚC 1: ĐỌC DỮ LIỆU & TÁCH BIẾN
+# --------------------------------------------------
+# Nạp file dữ liệu heart.csv
+df = pd.read_csv('heart.csv')
+
+# Tách đặc trưng đầu vào (X) và nhãn mục tiêu (y)
+X = df.drop('target', axis=1)
+y = df['target']
+
+# --------------------------------------------------
+# BƯỚC 2: CHIA TẬP TRAIN / TEST
+# --------------------------------------------------
+# Chia 80% để học (Train) và 20% để kiểm tra (Test)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+# --------------------------------------------------
+# BƯỚC 3: HUẤN LUYỆN MÔ HÌNH RANDOM FOREST
+# --------------------------------------------------
+# Khởi tạo mô hình với 100 cây quyết định
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+
+# Tiến hành huấn luyện mô hình
+model.fit(X_train, y_train)
+
+# --------------------------------------------------
+# BƯỚC 4: ĐÁNH GIÁ HIỆU NĂNG MÔ HÌNH
+# --------------------------------------------------
+# Dự đoán trên tập kiểm thử
+y_pred = model.predict(X_test)
+y_proba = model.predict_proba(X_test)[:, 1]
+
+print("--- BÁO CÁO KẾT QUẢ ĐÁNH GIÁ MÔ HÌNH ---")
+print(classification_report(y_test, y_pred, target_names=['Khỏe mạnh', 'Có nguy cơ']))
+print(f"Chỉ số AUC-ROC: {roc_auc_score(y_test, y_proba):.4f}")
+
+# Biểu đồ Ma trận nhầm lẫn (Confusion Matrix)
+plt.figure(figsize=(6, 4))
+sns.heatmap(confusion_matrix(y_test, y_pred), annot=True, fmt='d', cmap='Blues',
+            xticklabels=['Dự đoán Khỏe', 'Dự đoán Bệnh'],
+            yticklabels=['Thực tế Khỏe', 'Thực tế Bệnh'])
+plt.title('Ma trận nhầm lẫn (Confusion Matrix)')
+plt.show()
+
+# --------------------------------------------------
+# BƯỚC 5: TRÍCH XUẤT CÁC CHỈ SỐ Y TẾ QUAN TRỌNG NHẤT
+# --------------------------------------------------
+importances = pd.Series(model.feature_importances_, index=X.columns).sort_values(ascending=False)
+
+plt.figure(figsize=(10, 5))
+sns.barplot(x=importances.values, y=importances.index, palette='viridis')
+plt.title('Mức độ ảnh hưởng của các chỉ số y tế tới nguy cơ bệnh tim')
+plt.xlabel('Trọng số quan trọng')
+plt.ylabel('Chỉ số y tế')
+plt.show()
